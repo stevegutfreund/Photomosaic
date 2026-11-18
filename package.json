@@ -1,0 +1,26 @@
+{
+  "name": "photomosaic",
+  "version": "1.0.0",
+  "description": "Generates a photomosaic by matching source images to grid cells of a target image",
+  "main": "src/index.js",
+  "bin": {
+    "photomosaic": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "serve": "node src/server.js",
+    "test": "node src/index.js --help"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^12.1.0",
+    "express": "^4.19.2",
+    "multer": "^2.1.1",
+    "sharp": "^0.33.4",
+    "uuid": "^10.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

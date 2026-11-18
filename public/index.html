@@ -1,0 +1,618 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Photomosaic</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d12" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #f8fafc;
+    --surface-hover: #f1f5f9;
+    --border: #e4e7ec;
+    --border-strong: #cfd5de;
+    --text: #0f172a;
+    --text-2: #475569;
+    --text-3: #8a94a6;
+    --accent: #7e22ce;
+    --accent-hover: #6b21a8;
+    --accent-soft: #f5effc;
+    --accent-text: #ffffff;
+    --ok: #15803d;
+    --ok-soft: #ecfdf3;
+    --bad: #b42318;
+    --bad-soft: #fef3f2;
+    --warn: #a15c07;
+    --warn-soft: #fffaeb;
+    --focus: #2563eb;
+    --track: #e2e8f0;
+    --canvas: #eef1f5;
+    --shadow: 0 1px 2px rgba(15, 23, 42, .05);
+    --shadow-lg: 0 24px 60px rgba(15, 23, 42, .18);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0d12;
+      --surface: #141821;
+      --surface-2: #10141c;
+      --surface-hover: #1a2030;
+      --border: #222836;
+      --border-strong: #2f3749;
+      --text: #e8eaef;
+      --text-2: #a0a9b8;
+      --text-3: #6b7486;
+      --accent: #a855f7;
+      --accent-hover: #c084fc;
+      --accent-soft: rgba(168, 85, 247, .12);
+      --accent-text: #0b0d12;
+      --ok: #4ade80;
+      --ok-soft: rgba(74, 222, 128, .1);
+      --bad: #f87171;
+      --bad-soft: rgba(248, 113, 113, .1);
+      --warn: #fbbf24;
+      --warn-soft: rgba(251, 191, 36, .1);
+      --focus: #60a5fa;
+      --track: #262d3d;
+      --canvas: #0f131b;
+      --shadow: none;
+      --shadow-lg: 0 24px 60px rgba(0, 0, 0, .5);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  [hidden] { display: none !important; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 24px 48px; }
+
+  /* ---- Header ---------------------------------------------------------- */
+  .top { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+  .top .logo { width: 44px; height: 44px; flex-shrink: 0; border-radius: 10px; }
+  h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -.02em; margin: 0; line-height: 1.2; }
+  .sub { margin: 3px 0 0; color: var(--text-2); font-size: .9rem; }
+
+  /* ---- Layout ---------------------------------------------------------- */
+  .studio {
+    display: grid;
+    grid-template-columns: 380px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  /* ---- Settings panel -------------------------------------------------- */
+  .panel { overflow: hidden; }
+  .step { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .74rem; font-weight: 700;
+    background: var(--surface-hover); color: var(--text-2);
+    flex-shrink: 0;
+  }
+  .step.done .step-num { background: var(--accent); color: var(--accent-text); }
+  .step-title { font-weight: 600; font-size: .95rem; letter-spacing: -.01em; }
+  .step-aside { margin-left: auto; font-size: .8rem; color: var(--text-3); }
+
+  .drop {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    min-height: 120px; padding: 18px;
+    border: 1.5px dashed var(--border-strong); border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--text-2); text-align: center; font-size: .88rem;
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop svg { width: 26px; height: 26px; color: var(--text-3); }
+  .drop strong { color: var(--text); font-weight: 600; }
+  .drop .hint { color: var(--text-3); font-size: .8rem; }
+
+  .file-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2);
+  }
+  .file-row img { width: 52px; height: 52px; object-fit: cover; border-radius: 7px; flex-shrink: 0; background: var(--canvas); }
+  .file-info { flex: 1; min-width: 0; }
+  .file-name { display: block; font-weight: 600; font-size: .9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-meta { display: block; font-size: .8rem; color: var(--text-2); }
+
+  .field-row { display: flex; gap: 8px; }
+  .input {
+    width: 100%; min-width: 0;
+    padding: 9px 11px; font-size: .9rem;
+    border: 1px solid var(--border-strong); border-radius: 8px;
+    background: var(--surface); color: var(--text);
+  }
+  .input:focus { outline: 2px solid var(--focus); outline-offset: -1px; border-color: transparent; }
+  .input::placeholder { color: var(--text-3); }
+
+  .note { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; font-size: .82rem; color: var(--text-2); }
+  .note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 2px; }
+  .note.ok { color: var(--ok); }
+  .note.bad { color: var(--bad); }
+  .note.warn { color: var(--warn); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    max-width: 100%;
+    padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
+    background: var(--surface); color: var(--text-2); font-size: .78rem; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chip:hover { border-color: var(--border-strong); color: var(--text); }
+
+  /* Controls */
+  .ctl { margin-bottom: 16px; }
+  .ctl:last-child { margin-bottom: 0; }
+  .ctl-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
+  .ctl-label { font-size: .86rem; font-weight: 600; }
+  .ctl-value { font-size: .82rem; color: var(--accent); font-weight: 600; }
+  .ctl-help { font-size: .78rem; color: var(--text-3); margin-top: 6px; }
+
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer;
+    --p: 30%;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 4px;
+    background: linear-gradient(to right, var(--accent) var(--p), var(--track) var(--p));
+  }
+  input[type=range]::-moz-range-track { height: 4px; border-radius: 4px; background: var(--track); }
+  input[type=range]::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--accent); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.15);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--surface); border: 2px solid var(--accent);
+  }
+  input[type=range]:focus-visible { outline: none; }
+  input[type=range]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .seg {
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    padding: 3px; gap: 3px; border-radius: 9px; background: var(--surface-hover);
+  }
+  .seg button {
+    border: 0; background: transparent; padding: 6px 4px; border-radius: 7px;
+    font-size: .84rem; font-weight: 500; color: var(--text-2); cursor: pointer;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button[aria-pressed=true] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(15,23,42,.1); }
+
+  details.adv { margin-top: 4px; }
+  details.adv summary {
+    list-style: none; cursor: pointer; font-size: .84rem; font-weight: 500; color: var(--text-2);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  details.adv summary::-webkit-details-marker { display: none; }
+  details.adv summary svg { width: 14px; height: 14px; transition: transform .15s; }
+  details.adv[open] summary svg { transform: rotate(90deg); }
+  .adv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .adv-grid label { display: block; font-size: .78rem; color: var(--text-2); margin-bottom: 4px; }
+
+  .go { padding: 18px 20px; background: var(--surface-2); }
+  .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .summary div { min-width: 0; }
+  .summary dt { font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3); font-weight: 600; }
+  .summary dd { margin: 2px 0 0; font-size: .92rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    padding: 9px 14px; border-radius: 8px; border: 1px solid var(--border-strong);
+    background: var(--surface); color: var(--text);
+    font-size: .88rem; font-weight: 600; cursor: pointer; text-decoration: none; white-space: nowrap;
+    transition: background .15s, border-color .15s;
+  }
+  .btn:hover { background: var(--surface-hover); }
+  .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.danger { color: var(--bad); }
+  .btn.danger:hover { background: var(--bad-soft); border-color: var(--bad); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--text-2); }
+  .btn.ghost:hover { background: var(--surface-hover); color: var(--text); }
+  .btn.block { width: 100%; padding: 12px; font-size: .95rem; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.primary:disabled:hover { background: var(--accent); }
+
+  /* ---- Stage (right) --------------------------------------------------- */
+  .stage { min-height: 560px; display: flex; flex-direction: column; overflow: hidden; }
+  .stage-body {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    background: var(--canvas); padding: 24px; min-height: 420px; position: relative;
+  }
+  .stage-foot {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 14px 18px; border-top: 1px solid var(--border);
+    font-size: .85rem; color: var(--text-2);
+  }
+  .stage-foot .spacer { flex: 1; }
+
+  .empty { text-align: center; color: var(--text-2); max-width: 340px; }
+  .empty svg { width: 72px; height: 72px; margin-bottom: 14px; }
+  .empty h2 { font-size: 1.05rem; margin: 0 0 6px; color: var(--text); letter-spacing: -.01em; }
+  .empty p { margin: 0; font-size: .88rem; }
+
+  .frame { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
+  .frame img, .frame canvas.grid { max-width: 100%; max-height: 62vh; border-radius: 6px; }
+  .frame img { display: block; box-shadow: 0 6px 24px rgba(15,23,42,.14); }
+  .frame canvas.grid { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .frame.result img { cursor: zoom-in; }
+
+  .legend { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .sw { width: 10px; height: 10px; border-radius: 2px; border: 1.5px solid var(--accent); }
+
+  /* Progress */
+  .progress { width: 100%; max-width: 440px; }
+  .progress h2 { font-size: 1.05rem; margin: 0 0 4px; letter-spacing: -.01em; }
+  .progress .muted { color: var(--text-2); font-size: .86rem; margin: 0 0 18px; }
+  .bar { height: 6px; border-radius: 6px; background: var(--track); overflow: hidden; margin-bottom: 20px; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 6px; transition: width .4s ease; }
+  .stages { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .stages li { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: .88rem; color: var(--text-3); }
+  .stages li + li { border-top: 1px solid var(--border); }
+  .stages .ico { width: 18px; height: 18px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .stages .ico svg { width: 18px; height: 18px; }
+  .stages .count { margin-left: auto; font-size: .8rem; }
+  .stages li.active { color: var(--text); font-weight: 600; }
+  .stages li.active .count { color: var(--accent); }
+  .stages li.done { color: var(--text-2); }
+  .stages li.done .ico { color: var(--ok); }
+  .ring { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--track); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  .pending-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-strong); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .alert {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 10px 12px; border-radius: 9px; font-size: .85rem; margin-top: 14px;
+  }
+  .alert svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; }
+  .alert.bad { background: var(--bad-soft); color: var(--bad); }
+  .alert.warn { background: var(--warn-soft); color: var(--warn); }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 6px 16px; flex: 1 1 100%; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+  .stats span b { color: var(--text); font-weight: 600; }
+
+  /* ---- Gallery --------------------------------------------------------- */
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin: 40px 0 14px; }
+  .section-title { font-size: .74rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); margin: 0; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .tile {
+    display: block; width: 100%; padding: 0; text-align: left; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow); transition: border-color .15s, transform .15s;
+  }
+  .tile:hover { border-color: var(--border-strong); }
+  .tile .thumb { aspect-ratio: 4 / 3; background: var(--canvas); display: block; overflow: hidden; }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile .cap { display: block; padding: 10px 12px; }
+  .tile .t1 { display: block; font-weight: 600; font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .t2 { display: block; font-size: .78rem; color: var(--text-2); }
+  .gallery-empty { color: var(--text-3); font-size: .88rem; padding: 18px 0; }
+
+  /* ---- Dialogs --------------------------------------------------------- */
+  dialog {
+    border: 1px solid var(--border); border-radius: 14px; padding: 0;
+    background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg);
+    width: min(560px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 48px));
+  }
+  dialog[open] { display: flex; flex-direction: column; }
+  dialog::backdrop { background: rgba(15, 23, 42, .45); }
+  .dlg-head { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .dlg-head h2 { font-size: 1rem; margin: 0; letter-spacing: -.01em; flex: 1; min-width: 0; }
+  .icon-btn {
+    width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 8px; background: transparent; color: var(--text-2); cursor: pointer; flex-shrink: 0;
+  }
+  .icon-btn:hover { background: var(--surface-hover); color: var(--text); }
+  .icon-btn svg { width: 18px; height: 18px; }
+  .dlg-body { flex: 1; overflow: auto; min-height: 0; }
+  .dlg-foot { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .dlg-foot .spacer { flex: 1; }
+
+  .places { display: flex; gap: 6px; padding: 12px 18px 0; flex-wrap: wrap; }
+  .crumb {
+    display: flex; align-items: center; gap: 6px; padding: 12px 18px 8px;
+    font-size: .82rem; color: var(--text-2); word-break: break-all;
+  }
+  .crumb code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .8rem; color: var(--text); }
+  .dirs { list-style: none; margin: 0; padding: 4px 10px 12px; }
+  .dirs button {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border: 0; border-radius: 8px; background: transparent;
+    font-size: .9rem; text-align: left; cursor: pointer;
+  }
+  .dirs button:hover { background: var(--surface-hover); }
+  .dirs svg { width: 18px; height: 18px; color: var(--text-3); flex-shrink: 0; }
+  .dirs .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dirs .empty-row { padding: 16px 10px; color: var(--text-3); font-size: .86rem; }
+
+  dialog.viewer { width: min(1100px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+  .viewer .dlg-body { background: var(--canvas); display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .viewer .dlg-body img { max-width: 100%; max-height: calc(100vh - 220px); display: block; border-radius: 4px; }
+  .viewer .meta { font-size: .82rem; color: var(--text-2); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 9px;
+    font-size: .88rem; font-weight: 500; box-shadow: var(--shadow-lg); z-index: 10;
+    max-width: calc(100vw - 32px);
+  }
+
+  /* ---- Responsive ------------------------------------------------------ */
+  @media (max-width: 920px) {
+    .studio { grid-template-columns: 1fr; }
+    .stage { min-height: 0; }
+    .stage-body { min-height: 300px; }
+  }
+  @media (max-width: 560px) {
+    .wrap {
+      padding: 18px 16px 32px;
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+    .top { margin-bottom: 20px; }
+    .top .logo { width: 40px; height: 40px; }
+    h1 { font-size: 1.3rem; }
+    .step, .go { padding: 16px; }
+    .stage-body { padding: 14px; min-height: 240px; }
+    .gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    dialog { width: 100vw; max-width: 100vw; max-height: 100dvh; height: 100dvh; border-radius: 0; margin: 0; }
+    dialog.viewer { width: 100vw; max-height: 100dvh; }
+    .viewer .dlg-body img { max-height: calc(100dvh - 180px); }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5 6.5 11.5 12.5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.8v3.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="11.1" r=".9" fill="currentColor"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 20 20"><path d="M2.5 5.5a1.5 1.5 0 0 1 1.5-1.5h3.6l1.8 2h6.6a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+    <symbol id="i-up" viewBox="0 0 20 20"><path d="M10 15V5M5.5 9.5 10 5l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 20 20"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-download" viewBox="0 0 16 16"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-open" viewBox="0 0 16 16"><path d="M9 2.5h4.5V7M13.5 2.5 7.5 8.5M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.2a1 1 0 0 0 1 .8h3.8a1 1 0 0 0 1-.8l.6-8.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="9" cy="9.5" r="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m3.5 17 5-5 4 4 2.5-2.5 5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 16 16"><path d="M8 1.8 9.4 6.6 14.2 8 9.4 9.4 8 14.2 6.6 9.4 1.8 8 6.6 6.6z" fill="currentColor"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 16 16"><path d="M12.8 6.5A5 5 0 1 0 13 10M13 3v3.6H9.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <img class="logo" src="favicon.svg" alt="" width="44" height="44">
+    <div>
+      <h1>Photomosaic</h1>
+      <p class="sub">Rebuild a picture out of hundreds of your own photos.</p>
+    </div>
+  </header>
+
+  <main class="studio">
+    <!-- ================= Settings ================= -->
+    <section class="card panel" aria-label="Settings">
+
+      <div class="step" id="step-target">
+        <div class="step-head">
+          <span class="step-num">1</span>
+          <span class="step-title">Main picture</span>
+        </div>
+        <label class="drop" id="drop" tabindex="0">
+          <svg aria-hidden="true"><use href="#i-image"/></svg>
+          <span><strong>Choose a photo</strong> or drop it here</span>
+          <span class="hint">JPG, PNG, WebP or TIFF · up to 50 MB</span>
+          <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/tiff" hidden>
+        </label>
+        <div class="file-row" id="target-row" hidden>
+          <img id="target-thumb" alt="">
+          <span class="file-info">
+            <span class="file-name" id="target-name"></span>
+            <span class="file-meta num" id="target-meta"></span>
+          </span>
+          <button class="btn ghost" type="button" id="target-replace">Replace</button>
+        </div>
+        <div class="note bad" id="target-err" hidden><svg><use href="#i-alert"/></svg><span></span></div>
+      </div>
+
+      <div class="step" id="step-sources">
+        <div class="step-head">
+          <span class="step-num">2</span>
+          <span class="step-title">Tile photos</span>
+          <span class="step-aside">Folder on this PC</span>
+        </div>
+        <div class="field-row">
+          <input class="input" id="sources" type="text" placeholder="C:\Users\…\Pictures\Family" autocomplete="off" spellcheck="false" aria-label="Folder of tile photos">
+          <button class="btn" type="button" id="browse">Browse</button>
+        </div>
+        <div class="note" id="sources-note" hidden><svg><use href="#i-check"/></svg><span></span></div>
+        <div class="chips" id="recent" hidden></div>
+      </div>
+
+      <div class="step" id="step-style">
+        <div class="step-head">
+          <span class="step-num">3</span>
+          <span class="step-title">Style</span>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-head"><span class="ctl-label">Tile size</span><span class="ctl-value num" id="tile-val"></span></div>
+          <div class="seg" id="tile-seg" role="group" aria-label="Tile size">
+            <button type="button" data-v="60">S</button>
+            <button type="button" data-v="100">M</button>
+            <button type="button" data-v="150">L</button>
+            <button type="button" data-v="200">XL</button>
+          </div>
+          <div class="ctl-help">Bigger tiles make a sharper, larger file you can print or zoom into.</div>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-head"><label class="ctl-label" for="adjust">Colour blending</label><span class="ctl-value num" id="adjust-val"></span></div>
+          <input type="range" id="adjust" min="0" max="1" step="0.05">
+          <div class="ctl-help">Tints each photo towards its spot. Higher looks more like the main picture.</div>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-head"><label class="ctl-label" for="repeat">Photo reuse</label><span class="ctl-value" id="repeat-val"></span></div>
+          <input type="range" id="repeat" min="0" max="1" step="0.05">
+          <div class="ctl-help">“Never” uses each photo once. Allowing repeats gives more tiles and detail.</div>
+        </div>
+
+        <div class="ctl">
+          <div class="ctl-head"><span class="ctl-label">Matching</span></div>
+          <div class="seg" id="strategy-seg" role="group" aria-label="Matching">
+            <button type="button" data-v="thumbnail">Detailed</button>
+            <button type="button" data-v="avgColor">Fast</button>
+          </div>
+        </div>
+
+        <details class="adv">
+          <summary><svg aria-hidden="true"><use href="#i-chev"/></svg>Custom grid</summary>
+          <div class="adv-grid">
+            <div><label for="rows">Rows</label><input class="input num" id="rows" type="number" min="1" max="500" placeholder="Auto" inputmode="numeric"></div>
+            <div><label for="cols">Columns</label><input class="input num" id="cols" type="number" min="1" max="500" placeholder="Auto" inputmode="numeric"></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="go">
+        <dl class="summary">
+          <div><dt>Grid</dt><dd class="num" id="sum-grid">—</dd></div>
+          <div><dt>Tiles</dt><dd class="num" id="sum-tiles">—</dd></div>
+          <div><dt>Output</dt><dd class="num" id="sum-out">—</dd></div>
+        </dl>
+        <button class="btn primary block" type="button" id="generate" disabled>
+          <svg aria-hidden="true"><use href="#i-spark"/></svg>Create mosaic
+        </button>
+        <div class="note warn" id="go-note" hidden><svg><use href="#i-alert"/></svg><span></span></div>
+      </div>
+    </section>
+
+    <!-- ================= Stage ================= -->
+    <section class="card stage" aria-live="polite">
+      <div class="stage-body" id="stage-body">
+
+        <div class="empty" id="view-empty">
+          <svg viewBox="0 0 72 72" aria-hidden="true">
+            <rect x="4" y="4" width="64" height="64" rx="12" fill="var(--accent-soft)"/>
+            <g fill="var(--accent)">
+              <rect x="16" y="16" width="11" height="11" rx="2" opacity=".35"/><rect x="30.5" y="16" width="11" height="11" rx="2" opacity=".7"/><rect x="45" y="16" width="11" height="11" rx="2" opacity=".5"/>
+              <rect x="16" y="30.5" width="11" height="11" rx="2" opacity=".8"/><rect x="30.5" y="30.5" width="11" height="11" rx="2"/><rect x="45" y="30.5" width="11" height="11" rx="2" opacity=".4"/>
+              <rect x="16" y="45" width="11" height="11" rx="2" opacity=".55"/><rect x="30.5" y="45" width="11" height="11" rx="2" opacity=".3"/><rect x="45" y="45" width="11" height="11" rx="2" opacity=".75"/>
+            </g>
+          </svg>
+          <h2>Start with a picture</h2>
+          <p>Pick the main picture and a folder of photos. You’ll see the tile grid here before anything is made.</p>
+        </div>
+
+        <div class="frame" id="view-preview" hidden>
+          <img id="preview-img" alt="Main picture">
+          <canvas class="grid" id="grid"></canvas>
+        </div>
+
+        <div class="progress" id="view-progress" hidden>
+          <h2>Creating your mosaic</h2>
+          <p class="muted" id="prog-sub">Starting…</p>
+          <div class="bar"><i id="prog-bar"></i></div>
+          <ul class="stages" id="stages"></ul>
+          <div class="alert bad" id="prog-err" hidden><svg><use href="#i-alert"/></svg><span></span></div>
+        </div>
+
+        <div class="frame result" id="view-result" hidden>
+          <img id="result-img" alt="Finished mosaic">
+        </div>
+      </div>
+
+      <div class="stage-foot" id="foot-preview" hidden>
+        <span class="legend"><span class="sw"></span><span id="foot-preview-text"></span></span>
+      </div>
+
+      <div class="stage-foot" id="foot-result" hidden>
+        <div class="stats num" id="result-stats"></div>
+        <div class="actions">
+          <button class="btn ghost" type="button" id="again"><svg aria-hidden="true"><use href="#i-redo"/></svg>Adjust</button>
+          <a class="btn" id="result-open" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-open"/></svg>Full size</a>
+          <a class="btn primary" id="result-dl"><svg aria-hidden="true"><use href="#i-download"/></svg>Download</a>
+        </div>
+      </div>
+      <div class="alert warn" id="result-warn" hidden style="margin:0 18px 14px"><svg><use href="#i-alert"/></svg><span></span></div>
+    </section>
+  </main>
+
+  <div class="section-head">
+    <h2 class="section-title">Your mosaics <span id="gal-count"></span></h2>
+  </div>
+  <div class="gallery" id="gallery"></div>
+  <p class="gallery-empty" id="gallery-empty" hidden>Mosaics you make will appear here.</p>
+</div>
+
+<!-- Folder picker -->
+<dialog id="picker" aria-labelledby="picker-title">
+  <div class="dlg-head">
+    <h2 id="picker-title">Choose a folder of photos</h2>
+    <button class="icon-btn" type="button" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+  </div>
+  <div class="places" id="places"></div>
+  <div class="crumb"><button class="icon-btn" type="button" id="up" aria-label="Up one folder"><svg><use href="#i-up"/></svg></button><code id="crumb">Pick a place to start</code></div>
+  <div class="dlg-body"><ul class="dirs" id="dirs"></ul></div>
+  <div class="dlg-foot">
+    <span class="meta num" id="picker-count" style="font-size:.82rem;color:var(--text-2)"></span>
+    <span class="spacer"></span>
+    <button class="btn ghost" type="button" data-close>Cancel</button>
+    <button class="btn primary" type="button" id="picker-use" disabled>Use this folder</button>
+  </div>
+</dialog>
+
+<!-- Mosaic viewer -->
+<dialog id="viewer" class="viewer" aria-labelledby="viewer-title">
+  <div class="dlg-head">
+    <h2 id="viewer-title">Mosaic</h2>
+    <button class="icon-btn" type="button" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+  </div>
+  <div class="dlg-body"><img id="viewer-img" alt=""></div>
+  <div class="dlg-foot">
+    <span class="meta num" id="viewer-meta"></span>
+    <span class="spacer"></span>
+    <button class="btn danger" type="button" id="viewer-del"><svg aria-hidden="true"><use href="#i-trash"/></svg>Delete</button>
+    <a class="btn" id="viewer-open" target="_blank" rel="noopener"><svg aria-hidden="true"><use href="#i-open"/></svg>Full size</a>
+    <a class="btn primary" id="viewer-dl"><svg aria-hidden="true"><use href="#i-download"/></svg>Download</a>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# --- Personal photos and generated mosaics (never commit) ---
+output/
+tmp/
+sources/
+target.jpg
+node_modules/
+.env

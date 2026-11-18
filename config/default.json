@@ -1,0 +1,16 @@
+{
+  "sources": "./sources",
+  "target": "./target.jpg",
+  "output": "./output/mosaic.jpg",
+
+  "rows": null,
+  "cols": null,
+  "tile_width": null,
+  "tile_height": null,
+
+  "adjustment_strength": 0.3,
+  "repeat_freedom": 0.0,
+
+  "strategy": "thumbnail",
+  "use_thumbnail": true
+}
